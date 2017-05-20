@@ -22,7 +22,7 @@ function resize () {
 function setup () {
   // Example of a view
   myView = new GraphView();
-  myView.render(d3.select('#boilerplateViewContainer'));
+  myView.render(d3.select('#container'));
 }
 window.onload = setup;
 window.onresize = resize;
