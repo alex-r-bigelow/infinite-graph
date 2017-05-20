@@ -53,13 +53,21 @@ class Universe extends Model {
   getANode (roughDistance, roughAngle) {
     roughDistance = roughDistance || 0;
     roughAngle = roughAngle || Math.random() * 2 * Math.PI;
-
     // get the first node in the cell that closest fits these parameters
-    let cell = new Cell({
-      x: Math.round(roughDistance * Math.cos(roughAngle)),
-      y: Math.round(roughDistance * Math.sin(roughAngle))
-    });
-    return cell.nodes[0];
+
+    let cell;
+    while (true) {
+      cell = new Cell({
+        x: Math.round(roughDistance * Math.cos(roughAngle)),
+        y: Math.round(roughDistance * Math.sin(roughAngle))
+      });
+      if (cell.nodes.length > 0) {
+        return cell.nodes[0];
+      } else {
+        console.log('Hit an empty cell! Reducing distance by a factor of 0.9...');
+        roughDistance *= 0.9;
+      }
+    }
   }
 }
 export default Universe;

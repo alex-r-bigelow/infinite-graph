@@ -8,28 +8,50 @@
   bottom: 0em;
 
   svg {
-    background-color: black;
+    background-color: $spaceColor;
 
     #nodes {
-      circle {
-        fill: white;
-        stroke: none;
+      g {
+        circle {
+          fill: $starColor;
+          stroke: none;
+        }
 
-        &.current {
-          fill: #bada55;
-          stroke: black;
+        &.current circle {
+          stroke: $currentColor;
           stroke-width: 5px;
+        }
+
+        &.neighbor circle {
+          stroke: $jumpColor;
+          stroke-width: 2px;
         }
       }
     }
 
     #links {
-      path {
-        fill: none;
-        stroke: grey;
+      g {
+        path {
+          fill: none;
+          stroke: $linkColor;
+          stroke-width: 1px;
+        }
+
+        &.neighbor path {
+          stroke: $jumpColor;
+          stroke-width: 2px;
+        }
       }
-      text {
-        fill: white;
+    }
+
+    #neighbors {
+      g {
+        circle {
+          fill: rgba($spaceColor, 0.75);
+        }
+        text {
+          fill: $jumpColor;
+        }
       }
     }
   }

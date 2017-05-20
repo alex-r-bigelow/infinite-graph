@@ -34,20 +34,13 @@ $LightBrown: #F1E2CC;
 Color meanings:
 */
 
-$darkTextColor: $Black;
-$lightTextColor: $White;
-$linkColor: $DarkPurple;
-$errorColor: $DarkPink;
+$spaceColor: $Black;
 
-$selectionDarkColor: $DarkTeal;
-$selectionLightColor: $LightTeal;
+$starColor: $White;
+$linkColor: $Grey;
 
-$pageBackgroundColor: $LightGrey;
-$pageHeaderLightColor: $DarkGrey;
-$pageHeaderDarkColor: $Black;
-
-$darkUiColor: $DarkGrey;
-$lightUiColor: $LightestGrey;
+$currentColor: $DarkYellow;
+$jumpColor: $DarkYellow;
 
 /*
 Function to get the ID of an SVG color-changing filter

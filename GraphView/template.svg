@@ -1,5 +1,5 @@
 <svg>
   <g id="links"></g>
   <g id="nodes"></g>
-  <g id="overlay"></g>
+  <g id="neighbors"></g>
 </svg>

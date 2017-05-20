@@ -11,20 +11,33 @@ class GraphView extends View {
     d3el.html(template);
 
     this.universe = new Universe();
-    this.scaleFactor = 750;
+    this.scaleFactor = 500;
     this.currentNode = this.universe.getANode();
   }
 
   convertToScreenSpace (point, bounds) {
     return {
-      x: (this.scaleFactor * (point.x - this.currentNode.x) + bounds.width) / 2,
-      y: (this.scaleFactor * (point.y - this.currentNode.y) + bounds.height) / 2
+      id: point.id,
+      x: this.scaleFactor * (point.x - this.currentNode.x) + bounds.width / 2,
+      y: this.scaleFactor * (point.y - this.currentNode.y) + bounds.height / 2
     };
   }
 
-  draw (d3el) {
-    let self = this;
+  assignKey (sourceNode, targetNode, existingAssignments) {
+    let keyPriority = ['5', '4', '8', '6', '2', '7', '9', '1', '3', '0', '/', '+', '.', '-', '*'];
+    let i = 0;
+    while (true) {
+      if (i >= keyPriority.length) {
+        throw new Error('ran out of key bindings!');
+      } else if (existingAssignments[keyPriority[i]]) {
+        i += 1;
+      } else {
+        return keyPriority[i];
+      }
+    }
+  }
 
+  draw (d3el) {
     let containerBounds = d3el.node().getBoundingClientRect();
     let svg = d3el.select('svg');
     svg.attrs({
@@ -32,20 +45,45 @@ class GraphView extends View {
       height: containerBounds.height
     });
 
-    this.origin = this.convertToScreenSpace(this.currentNode, containerBounds);  // may be slightly off 0,0
-
     let xRadius = containerBounds.width / (2 * this.scaleFactor);
     let yRadius = containerBounds.height / (2 * this.scaleFactor);
 
     let cellViewport = {
-      left: Math.floor(this.currentNode.x - xRadius) - 1,
-      top: Math.floor(this.currentNode.y - yRadius) - 1,
-      right: Math.ceil(this.currentNode.x + xRadius) + 1,
-      bottom: Math.ceil(this.currentNode.y + yRadius) + 1
+      left: Math.floor(this.currentNode.x - xRadius),
+      top: Math.floor(this.currentNode.y - yRadius),
+      right: Math.ceil(this.currentNode.x + xRadius),
+      bottom: Math.ceil(this.currentNode.y + yRadius)
     };
 
     let graph = this.universe.getGraph(cellViewport);
-    // Translate coordinates into screen space
+
+    // Data cleaning: collect the immediate neighbors, and assign keys
+    // based on their rough direction
+    let neighborNodes = {};
+    let keyAssignments = {};
+    graph.links.forEach(d => {
+      if (d.source.id === this.currentNode.id) {
+        let target = {
+          key: this.assignKey(d.source, d.target, keyAssignments),
+          id: d.target.id,
+          x: d.target.x,
+          y: d.target.y
+        };
+        keyAssignments[target.key] = target.id;
+        neighborNodes[target.id] = target;
+      } else if (d.target.id === this.currentNode.id) {
+        let target = {
+          key: this.assignKey(d.target, d.source, keyAssignments),
+          id: d.source.id,
+          x: d.source.x,
+          y: d.source.y
+        };
+        keyAssignments[target.key] = target.id;
+        neighborNodes[target.id] = target;
+      }
+    });
+
+    // Data cleaning: translate the node and link coordinates into screen space
     graph.nodes = graph.nodes.map(d => this.convertToScreenSpace(d, containerBounds));
     graph.links = graph.links.map(d => {
       return {
@@ -56,7 +94,7 @@ class GraphView extends View {
 
     // Draw the nodes
     let nodes = svg.select('#nodes').selectAll('g')
-      .data(graph.nodes, d => d.x + '_' + d.y);
+      .data(graph.nodes, d => d.id);
 
     nodes.exit().remove();
 
@@ -64,14 +102,23 @@ class GraphView extends View {
     nodesEnter.append('circle');
 
     nodes = nodes.merge(nodesEnter);
-    nodes.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
+    nodes.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')')
+      .classed('current', d => d.id === this.currentNode.id)
+      .classed('neighbor', d => !!neighborNodes[d.id]);
     nodes.select('circle')
-      .attr('r', d => d.x === this.origin.x && d.y === this.origin.y ? 10 : 5)
-      .classed('current', d => d.x === this.origin.x && d.y === this.origin.y);
+      .attr('r', d => {
+        if (d.id === this.currentNode.id) {
+          return 10;
+        } else if (neighborNodes[d.id]) {
+          return 7;
+        } else {
+          return 5;
+        }
+      });
 
     // Draw the links
     let links = svg.select('#links').selectAll('g')
-      .data(graph.links, d => d.source.x + '_' + d.source.y + '_' + d.target.x + '_' + d.target.y);
+      .data(graph.links, d => d.source.id + '_' + d.target.id);
 
     links.exit().remove();
 
@@ -79,34 +126,47 @@ class GraphView extends View {
     linksEnter.append('path');
 
     links = links.merge(linksEnter);
+    links.classed('neighbor', d => d.source.id === this.currentNode.id || d.target.id === this.currentNode.id);
     links.select('path')
       .attr('d', d => {
         return 'M' + d.source.x + ',' + d.source.y + 'L' + d.target.x + ',' + d.target.y;
       });
-    links.select('text').remove();
 
-    // Set up interaction
-    let immediateLinks = links.filter(d => {
-      return (d.source.x === this.origin.x && d.source.y === this.origin.y) ||
-        (d.target.x === this.origin.x && d.target.y === this.origin.y);
+    // Draw the neighboring key bindings for travel
+    let neighbors = d3el.select('#neighbors').selectAll('g')
+      .data(d3.values(neighborNodes), d => d.id);
+
+    neighbors.exit().remove();
+
+    let neighborsEnter = neighbors.enter().append('g');
+    neighborsEnter.append('circle')
+      .attr('r', '0.75em');
+    neighborsEnter.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('y', '0.35em');
+
+    neighbors = neighbors.merge(neighborsEnter);
+    neighbors.attr('transform', d => {
+      // We want to project the roughly 2em (24px?) beyond the node
+      // (note that we did NOT convert these coordinates yet;
+      // they're still in data space, not screen space)
+      let dx = (d.x - this.currentNode.x);
+      let dy = (d.y - this.currentNode.y);
+      let x = this.scaleFactor * dx + containerBounds.width / 2;
+      let y = this.scaleFactor * dy + containerBounds.height / 2;
+      let theta = Math.atan2(dy, dx);
+      x += 24 * Math.cos(theta);
+      y += 24 * Math.sin(theta);
+      return 'translate(' + x + ',' + y + ')';
     });
+    neighbors.select('text').text(d => d.key);
 
-    let letters = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '+', '-', '*', '/'];
-    let keybindings = {};
-
-    immediateLinks.append('text')
-      .text(function (d, i) {
-        // TODO: come up with a better way of selecting keys, based on the direction of the link
-        this.targetNode = d.source.x === self.origin.y && d.source.y === self.origin.y ? d.target : d.source;
-        keybindings[letters[i]] = this.targetNode;
-        return letters[i];
-      })
-      .attr('x', function () { return this.targetNode.x; })
-      .attr('y', function () { return this.targetNode.y; });
-    d3el.on('keyup', () => {
+    // Set up the interaction
+    d3.select('body').on('keyup', () => {
       let typedLetter = d3.event.key;
-      if (keybindings[typedLetter]) {
-        this.currentNode = keybindings[typedLetter];
+      if (keyAssignments[typedLetter]) {
+        let newNode = neighborNodes[keyAssignments[typedLetter]];
+        this.currentNode = newNode;
         this.render();
       }
     });
