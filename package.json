@@ -1,0 +1,41 @@
+{
+  "name": "my-es6-boilerplate",
+  "version": "0.1.0",
+  "description": "Boilerplate for webpack, according to Alex Bigelow.",
+  "repository": {
+    "type": "git"
+  },
+  "author": "Alex Bigelow",
+  "scripts": {
+    "prepare": "cd lib; ../node_modules/rollup/bin/rollup -c && ../node_modules/uglify-js/bin/uglifyjs d3.js -c -m -o d3.min.js"
+  },
+  "devDependencies": {
+    "babel-core": "^6.7.2",
+    "babel-loader": "^6.2.4",
+    "babel-preset-es2015": "^6.6.0",
+    "clean-webpack-plugin": "^0.1.8",
+    "css-loader": "^0.26.1",
+    "d3-collection": "^1.0.2",
+    "d3-selection": "^1.0.3",
+    "d3-selection-multi": "^1.0.0",
+    "d3-transition": "^1.0.3",
+    "d3-voronoi": "^1.1.2",
+    "file-loader": "^0.10.0",
+    "html-loader": "^0.4.3",
+    "html-webpack-plugin": "^2.10.0",
+    "json-loader": "^0.5.4",
+    "node-sass": "^4.5.1",
+    "rollup": "^0.41.4",
+    "rollup-plugin-node-resolve": "^2.0.0",
+    "sass-loader": "^6.0.3",
+    "seedrandom": "^2.4.3",
+    "style-loader": "^0.13.0",
+    "uglify-js": "^2.7.5",
+    "url-loader": "^0.5.8",
+    "webpack": "^2.2.1"
+  },
+  "dependencies": {
+    "backbone": "^1.3.3",
+    "jquery": "^3.1.1"
+  }
+}

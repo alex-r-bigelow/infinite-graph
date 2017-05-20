@@ -1,0 +1,36 @@
+@import '../style/colors.scss';
+
+#boilerplateViewContainer {
+  position: absolute;
+  top: 0em;
+  left: 0em;
+  right: 0em;
+  bottom: 0em;
+
+  svg {
+    background-color: black;
+
+    #nodes {
+      circle {
+        fill: white;
+        stroke: none;
+
+        &.current {
+          fill: #bada55;
+          stroke: black;
+          stroke-width: 5px;
+        }
+      }
+    }
+
+    #links {
+      path {
+        fill: none;
+        stroke: grey;
+      }
+      text {
+        fill: white;
+      }
+    }
+  }
+}
