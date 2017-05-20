@@ -11,7 +11,7 @@ class GraphView extends View {
     d3el.html(template);
 
     this.universe = new Universe();
-    this.scaleFactor = 500;
+    this.scaleFactor = 300;
     this.currentNode = this.universe.getANode();
   }
 
@@ -38,6 +38,13 @@ class GraphView extends View {
   }
 
   draw (d3el) {
+    let t1 = d3.transition()
+      .duration(250);
+    let t2 = t1.transition()
+      .duration(250);
+    let t3 = t2.transition()
+      .duration(250);
+
     let containerBounds = d3el.node().getBoundingClientRect();
     let svg = d3el.select('svg');
     svg.attrs({
@@ -49,10 +56,10 @@ class GraphView extends View {
     let yRadius = containerBounds.height / (2 * this.scaleFactor);
 
     let cellViewport = {
-      left: Math.floor(this.currentNode.x - xRadius),
-      top: Math.floor(this.currentNode.y - yRadius),
-      right: Math.ceil(this.currentNode.x + xRadius),
-      bottom: Math.ceil(this.currentNode.y + yRadius)
+      left: Math.floor(this.currentNode.x - xRadius - 0.5),
+      top: Math.floor(this.currentNode.y - yRadius - 0.5),
+      right: Math.ceil(this.currentNode.x + xRadius + 0.5),
+      bottom: Math.ceil(this.currentNode.y + yRadius + 0.5)
     };
 
     let graph = this.universe.getGraph(cellViewport);
@@ -98,13 +105,18 @@ class GraphView extends View {
 
     nodes.exit().remove();
 
-    let nodesEnter = nodes.enter().append('g');
+    let nodesEnter = nodes.enter().append('g')
+      .attr('opacity', 0)
+      .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
     nodesEnter.append('circle');
 
     nodes = nodes.merge(nodesEnter);
-    nodes.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')')
-      .classed('current', d => d.id === this.currentNode.id)
-      .classed('neighbor', d => !!neighborNodes[d.id]);
+    nodes.classed('current', d => d.id === this.currentNode.id)
+      .classed('neighbor', d => !!neighborNodes[d.id])
+      .transition(t2)
+        .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
+    nodes.transition(t3)
+      .attr('opacity', 1);
     nodes.select('circle')
       .attr('r', d => {
         if (d.id === this.currentNode.id) {
@@ -123,22 +135,31 @@ class GraphView extends View {
     links.exit().remove();
 
     let linksEnter = links.enter().append('g');
-    linksEnter.append('path');
+    linksEnter.append('path')
+      .attr('opacity', 0)
+      .attr('d', d => {
+        return 'M' + d.source.x + ',' + d.source.y + 'L' + d.target.x + ',' + d.target.y;
+      });
 
     links = links.merge(linksEnter);
     links.classed('neighbor', d => d.source.id === this.currentNode.id || d.target.id === this.currentNode.id);
     links.select('path')
-      .attr('d', d => {
-        return 'M' + d.source.x + ',' + d.source.y + 'L' + d.target.x + ',' + d.target.y;
-      });
+      .transition(t2)
+        .attr('d', d => {
+          return 'M' + d.source.x + ',' + d.source.y + 'L' + d.target.x + ',' + d.target.y;
+        });
+    links.select('path')
+      .transition(t3)
+        .attr('opacity', 1);
 
     // Draw the neighboring key bindings for travel
     let neighbors = d3el.select('#neighbors').selectAll('g')
       .data(d3.values(neighborNodes), d => d.id);
 
-    neighbors.exit().remove();
+    let neighborsExit = neighbors.exit();
 
-    let neighborsEnter = neighbors.enter().append('g');
+    let neighborsEnter = neighbors.enter().append('g')
+      .attr('opacity', 0);
     neighborsEnter.append('circle')
       .attr('r', '0.75em');
     neighborsEnter.append('text')
@@ -146,20 +167,37 @@ class GraphView extends View {
       .attr('y', '0.35em');
 
     neighbors = neighbors.merge(neighborsEnter);
-    neighbors.attr('transform', d => {
-      // We want to project the roughly 2em (24px?) beyond the node
-      // (note that we did NOT convert these coordinates yet;
-      // they're still in data space, not screen space)
-      let dx = (d.x - this.currentNode.x);
-      let dy = (d.y - this.currentNode.y);
-      let x = this.scaleFactor * dx + containerBounds.width / 2;
-      let y = this.scaleFactor * dy + containerBounds.height / 2;
-      let theta = Math.atan2(dy, dx);
-      x += 24 * Math.cos(theta);
-      y += 24 * Math.sin(theta);
-      return 'translate(' + x + ',' + y + ')';
-    });
-    neighbors.select('text').text(d => d.key);
+
+    // In the first transition, hide everything to do with navigation
+    neighborsExit.transition(t1)
+      .attr('opacity', 0);
+    neighbors.transition(t1)
+      .attr('opacity', 0);
+
+    // While things are hidden in the second transition, move / update stuff
+    neighborsExit.transition(t2).remove();
+
+    neighbors.transition(t2)
+      .attr('transform', d => {
+        // We want to project the roughly 2em (24px?) beyond the node
+        // (note that we did NOT convert these coordinates yet;
+        // they're still in data space, not screen space)
+        let dx = (d.x - this.currentNode.x);
+        let dy = (d.y - this.currentNode.y);
+        let x = this.scaleFactor * dx + containerBounds.width / 2;
+        let y = this.scaleFactor * dy + containerBounds.height / 2;
+        let theta = Math.atan2(dy, dx);
+        x += 24 * Math.cos(theta);
+        y += 24 * Math.sin(theta);
+        return 'translate(' + x + ',' + y + ')';
+      });
+    neighbors.select('text')
+      .transition(t2)
+      .text(d => d.key);
+
+    // Finally in the third transition, show everything again
+    neighbors.transition(t3)
+      .attr('opacity', 1);
 
     // Set up the interaction
     d3.select('body').on('keyup', () => {
@@ -168,6 +206,16 @@ class GraphView extends View {
         let newNode = neighborNodes[keyAssignments[typedLetter]];
         this.currentNode = newNode;
         this.render();
+      } else if (typedLetter === 'j') {
+        let theta = Math.atan2(this.currentNode.y, this.currentNode.x);
+        let distance = Math.sqrt(this.currentNode.x ** 2 + this.currentNode.y ** 2);
+        let current = distance + ',' + theta;
+        let newDirection = window.prompt('Jump to approximately (distance from center, angle in radians):', current);
+        if (newDirection) {
+          newDirection = newDirection.split(',').map(d => parseFloat(d));
+          this.currentNode = this.universe.getANode(newDirection[0], newDirection[1]);
+          this.render();
+        }
       }
     });
   }
