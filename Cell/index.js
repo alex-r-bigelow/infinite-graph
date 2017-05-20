@@ -1,6 +1,8 @@
 import * as d3 from 'd3';
 import seedrandom from 'seedrandom';
 
+import System from '../System';
+
 class Cell {
   constructor (coordinates) {
     this.coordinates = coordinates;
@@ -22,11 +24,12 @@ class Cell {
     let locations = {};
     for (let i = 0; i < numNodes; i += 1) {
       // Ensure some basic separation of the nodes
-      let newNode = {
-        id: this.cellId + '_' + i,
-        x: this.coordinates.x + Math.round(20 * numberGenerator()) / 20,
-        y: this.coordinates.y + Math.round(20 * numberGenerator()) / 20
-      };
+      let newNode = new System(
+        numberGenerator.int32(),
+        this.cellId + '_' + i,
+        this.coordinates.x + Math.round(20 * numberGenerator()) / 20,
+        this.coordinates.y + Math.round(20 * numberGenerator()) / 20
+      );
       let key = newNode.x + '_' + newNode.y;
       if (!locations[key]) {
         // Prevent nodes from being in the same place... even though the odds are small,
