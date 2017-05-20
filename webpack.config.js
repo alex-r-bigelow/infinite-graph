@@ -48,7 +48,10 @@ module.exports = {
       },
       {
         test: /\.html$/,
-        loader: 'html-loader?attrs=img:src'
+        loader: 'html-loader',
+        query: {
+          attrs: ['img:src', 'link:href']
+        }
       },
       {
         test: /\.jpe?g$|\.gif$|\.png$|(?!template\b)\b\w+\.svg$|\.woff$|\.ttf$|\.wav$|\.mp3$/,
