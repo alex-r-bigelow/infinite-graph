@@ -67,28 +67,15 @@ class GraphView extends View {
     // Data cleaning: collect the immediate neighbors, and assign keys
     // based on their rough direction
     let neighborSystems = {};
-    let keyAssignments = {};
-    graph.links.forEach(d => {
-      if (d.source.id === this.currentSystem.id) {
-        let target = {
-          key: this.assignKey(d.source, d.target, keyAssignments),
-          id: d.target.id,
-          x: d.target.x,
-          y: d.target.y
-        };
-        keyAssignments[target.key] = target.id;
-        neighborSystems[target.id] = target;
-      } else if (d.target.id === this.currentSystem.id) {
-        let target = {
-          key: this.assignKey(d.target, d.source, keyAssignments),
-          id: d.source.id,
-          x: d.source.x,
-          y: d.source.y
-        };
-        keyAssignments[target.key] = target.id;
-        neighborSystems[target.id] = target;
-      }
-    });
+    let keyToId = {};
+    let idToKey = {};
+    this.universe.getSystemNeighbors(this.currentSystem.id)
+      .forEach(d => {
+        neighborSystems[d] = this.universe.getSystem(d);
+        let assignedKey = this.assignKey(this.currentSystem, neighborSystems[d], keyToId);
+        keyToId[assignedKey] = d;
+        idToKey[d] = assignedKey;
+      });
 
     // Data cleaning: translate the system and link coordinates into screen space
     graph.systems = graph.systems.map(d => this.convertToScreenSpace(d, containerBounds));
@@ -193,7 +180,7 @@ class GraphView extends View {
       });
     neighbors.select('text')
       .transition(t2)
-      .text(d => d.key);
+      .text(d => idToKey[d.id]);
 
     // Finally in the third transition, show everything again
     neighbors.transition(t3)
@@ -202,8 +189,8 @@ class GraphView extends View {
     // Set up the interaction
     d3.select('body').on('keyup', () => {
       let typedLetter = d3.event.key;
-      if (keyAssignments[typedLetter]) {
-        let newSystem = neighborSystems[keyAssignments[typedLetter]];
+      if (keyToId[typedLetter]) {
+        let newSystem = neighborSystems[keyToId[typedLetter]];
         this.currentSystem = newSystem;
         this.render();
       } else if (typedLetter === 'j') {

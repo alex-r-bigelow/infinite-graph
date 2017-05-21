@@ -24,20 +24,22 @@ class Cell {
 
     // 2. Where are those systems?
     this.systems = [];
-    let locations = {};
+    let locations = {'dummy': {}};
     for (let i = 0; i < numSystems; i += 1) {
-      let newSystem = new System(
-        this.id + ':' + i,
-        // Ensure some basic separation of the systems
-        this.x + Math.round(10 * numberGenerator()) / 10,
-        this.y + Math.round(10 * numberGenerator()) / 10
-      );
-      let key = newSystem.x + '_' + newSystem.y;
-      if (!locations[key]) {
-        // Prevent duplicate systems
-        locations[key] = newSystem;
-        this.systems.push(newSystem);
+      // Prevent duplicate systems
+      let newSystem;
+      let key = 'dummy';
+      while (locations[key]) {
+        newSystem = new System(
+          this.id + ':' + i,
+          // Ensure some basic separation of the systems
+          this.x + Math.round(10 * numberGenerator()) / 10,
+          this.y + Math.round(10 * numberGenerator()) / 10
+        );
+        key = newSystem.x + '_' + newSystem.y;
       }
+      locations[key] = newSystem;
+      this.systems.push(newSystem);
     }
 
     // 3. We need to generate three additional seeds that can be (reproducably)
@@ -65,6 +67,9 @@ class Cell {
     return this.links;
   }
   rightLinks (rightCell) {
+    if (rightCell.x !== this.x + 1) {
+      throw new Error('Tried to get links between non-adjacent cells');
+    }
     this.lastTouched = Date.now();
     if (this._rightLinks) {
       return this._rightLinks;
@@ -84,6 +89,9 @@ class Cell {
     return this._rightLinks;
   }
   bottomLinks (bottomCell) {
+    if (bottomCell.y !== this.y + 1) {
+      throw new Error('Tried to get links between non-adjacent cells');
+    }
     this.lastTouched = Date.now();
     if (this._bottomLinks) {
       return this._bottomLinks;

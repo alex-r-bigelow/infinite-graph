@@ -51,8 +51,33 @@ class Universe extends Model {
   }
 
   getSystemNeighbors (systemId) {
-    let system = this.getSystem(systemId);
+    // To be absolutely sure we've got all the connections, we need to look up
+    // each neighboring cell
+    let parsedId = this.parseSystemId(systemId);
+    let mainCell = this.getCell(Math.floor(parsedId.x), Math.floor(parsedId.y));
+    let leftCell = this.getCell(mainCell.x - 1, mainCell.y);
+    let topCell = this.getCell(mainCell.x, mainCell.y - 1);
+    let rightCell = this.getCell(mainCell.x + 1, mainCell.y);
+    let bottomCell = this.getCell(mainCell.x, mainCell.y + 1);
 
+    let neighborIds = [];
+
+    mainCell.internalLinks()
+      .concat(leftCell.rightLinks(mainCell))
+      .concat(mainCell.rightLinks(rightCell))
+      .concat(topCell.bottomLinks(mainCell))
+      .concat(mainCell.bottomLinks(bottomCell))
+      .forEach(d => {
+        if (d.source.id === systemId) {
+          neighborIds.push(d.target.id);
+        } else if (d.target.id === systemId) {
+          neighborIds.push(d.source.id);
+        }
+      });
+
+    this.scheduleCellCleaning();
+
+    return neighborIds;
   }
 
   parseSystemId (systemId) {
@@ -76,11 +101,11 @@ class Universe extends Model {
   getSystem (systemId) {
     let parsedId = this.parseSystemId(systemId);
     if (isNaN(parsedId.x) || isNaN(parsedId.y) || isNaN(parsedId.system)) {
-      throw new Error('Bad Cell Id');
+      throw new Error('Bad Cell Id: ' + systemId);
     }
     let cell = this.getCell(parsedId.x, parsedId.y);
     if (parsedId.system >= cell.systems.length) {
-      throw new Error('Bad System Number');
+      throw new Error('Bad System Number: ' + systemId);
     }
     return cell.systems[parsedId.system];
   }
