@@ -23,7 +23,7 @@ class Universe extends Model {
     // Construct the graph to return to the user, adding
     // any new cells along the way
     let graph = {
-      nodes: [],
+      systems: [],
       links: []
     };
 
@@ -34,7 +34,7 @@ class Universe extends Model {
           this.currentCells[key] = new Cell({x, y});
         }
         let cell = this.currentCells[key];
-        graph.nodes = graph.nodes.concat(cell.nodes);
+        graph.systems = graph.systems.concat(cell.systems);
         graph.links = graph.links.concat(cell.generateInternalLinks());
         if (x > cellViewport.left) {
           let leftLinks = this.currentCells[(x - 1) + '_' + y].generateRightLinks(cell);
@@ -50,10 +50,10 @@ class Universe extends Model {
     return graph;
   }
 
-  getANode (roughDistance, roughAngle) {
+  getASystem (roughDistance, roughAngle) {
     roughDistance = roughDistance || 0;
     roughAngle = roughAngle || Math.random() * 2 * Math.PI;
-    // get the first node in the cell that closest fits these parameters
+    // get the first system in the cell that closest fits these parameters
 
     let cell;
     while (true) {
@@ -61,8 +61,8 @@ class Universe extends Model {
         x: Math.round(roughDistance * Math.cos(roughAngle)),
         y: Math.round(roughDistance * Math.sin(roughAngle))
       });
-      if (cell.nodes.length > 0) {
-        return cell.nodes[0];
+      if (cell.systems.length > 0) {
+        return cell.systems[0];
       } else {
         console.log('Hit an empty cell! Reducing distance by a factor of 0.9...');
         roughDistance *= 0.9;

@@ -12,18 +12,18 @@ class GraphView extends View {
 
     this.universe = new Universe();
     this.scaleFactor = 300;
-    this.currentNode = this.universe.getANode();
+    this.currentSystem = this.universe.getASystem();
   }
 
   convertToScreenSpace (point, bounds) {
     return {
       id: point.id,
-      x: this.scaleFactor * (point.x - this.currentNode.x) + bounds.width / 2,
-      y: this.scaleFactor * (point.y - this.currentNode.y) + bounds.height / 2
+      x: this.scaleFactor * (point.x - this.currentSystem.x) + bounds.width / 2,
+      y: this.scaleFactor * (point.y - this.currentSystem.y) + bounds.height / 2
     };
   }
 
-  assignKey (sourceNode, targetNode, existingAssignments) {
+  assignKey (sourceSystem, targetSystem, existingAssignments) {
     let keyPriority = ['5', '4', '8', '6', '2', '7', '9', '1', '3', '0', '/', '+', '.', '-', '*'];
     let i = 0;
     while (true) {
@@ -56,20 +56,20 @@ class GraphView extends View {
     let yRadius = containerBounds.height / (2 * this.scaleFactor);
 
     let cellViewport = {
-      left: Math.floor(this.currentNode.x - xRadius - 0.5),
-      top: Math.floor(this.currentNode.y - yRadius - 0.5),
-      right: Math.ceil(this.currentNode.x + xRadius + 0.5),
-      bottom: Math.ceil(this.currentNode.y + yRadius + 0.5)
+      left: Math.floor(this.currentSystem.x - xRadius - 0.5),
+      top: Math.floor(this.currentSystem.y - yRadius - 0.5),
+      right: Math.ceil(this.currentSystem.x + xRadius + 0.5),
+      bottom: Math.ceil(this.currentSystem.y + yRadius + 0.5)
     };
 
     let graph = this.universe.getGraph(cellViewport);
 
     // Data cleaning: collect the immediate neighbors, and assign keys
     // based on their rough direction
-    let neighborNodes = {};
+    let neighborSystems = {};
     let keyAssignments = {};
     graph.links.forEach(d => {
-      if (d.source.id === this.currentNode.id) {
+      if (d.source.id === this.currentSystem.id) {
         let target = {
           key: this.assignKey(d.source, d.target, keyAssignments),
           id: d.target.id,
@@ -77,8 +77,8 @@ class GraphView extends View {
           y: d.target.y
         };
         keyAssignments[target.key] = target.id;
-        neighborNodes[target.id] = target;
-      } else if (d.target.id === this.currentNode.id) {
+        neighborSystems[target.id] = target;
+      } else if (d.target.id === this.currentSystem.id) {
         let target = {
           key: this.assignKey(d.target, d.source, keyAssignments),
           id: d.source.id,
@@ -86,12 +86,12 @@ class GraphView extends View {
           y: d.source.y
         };
         keyAssignments[target.key] = target.id;
-        neighborNodes[target.id] = target;
+        neighborSystems[target.id] = target;
       }
     });
 
-    // Data cleaning: translate the node and link coordinates into screen space
-    graph.nodes = graph.nodes.map(d => this.convertToScreenSpace(d, containerBounds));
+    // Data cleaning: translate the system and link coordinates into screen space
+    graph.systems = graph.systems.map(d => this.convertToScreenSpace(d, containerBounds));
     graph.links = graph.links.map(d => {
       return {
         source: this.convertToScreenSpace(d.source, containerBounds),
@@ -99,29 +99,29 @@ class GraphView extends View {
       };
     });
 
-    // Draw the nodes
-    let nodes = svg.select('#nodes').selectAll('g')
-      .data(graph.nodes, d => d.id);
+    // Draw the systems
+    let systems = svg.select('#systems').selectAll('g')
+      .data(graph.systems, d => d.id);
 
-    nodes.exit().remove();
+    systems.exit().remove();
 
-    let nodesEnter = nodes.enter().append('g')
+    let systemsEnter = systems.enter().append('g')
       .attr('opacity', 0)
       .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
-    nodesEnter.append('circle');
+    systemsEnter.append('circle');
 
-    nodes = nodes.merge(nodesEnter);
-    nodes.classed('current', d => d.id === this.currentNode.id)
-      .classed('neighbor', d => !!neighborNodes[d.id])
+    systems = systems.merge(systemsEnter);
+    systems.classed('current', d => d.id === this.currentSystem.id)
+      .classed('neighbor', d => !!neighborSystems[d.id])
       .transition(t2)
         .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')');
-    nodes.transition(t3)
+    systems.transition(t3)
       .attr('opacity', 1);
-    nodes.select('circle')
+    systems.select('circle')
       .attr('r', d => {
-        if (d.id === this.currentNode.id) {
+        if (d.id === this.currentSystem.id) {
           return 10;
-        } else if (neighborNodes[d.id]) {
+        } else if (neighborSystems[d.id]) {
           return 7;
         } else {
           return 5;
@@ -142,7 +142,7 @@ class GraphView extends View {
       });
 
     links = links.merge(linksEnter);
-    links.classed('neighbor', d => d.source.id === this.currentNode.id || d.target.id === this.currentNode.id);
+    links.classed('neighbor', d => d.source.id === this.currentSystem.id || d.target.id === this.currentSystem.id);
     links.select('path')
       .transition(t2)
         .attr('d', d => {
@@ -154,7 +154,7 @@ class GraphView extends View {
 
     // Draw the neighboring key bindings for travel
     let neighbors = d3el.select('#neighbors').selectAll('g')
-      .data(d3.values(neighborNodes), d => d.id);
+      .data(d3.values(neighborSystems), d => d.id);
 
     let neighborsExit = neighbors.exit();
 
@@ -179,11 +179,11 @@ class GraphView extends View {
 
     neighbors.transition(t2)
       .attr('transform', d => {
-        // We want to project the roughly 2em (24px?) beyond the node
+        // We want to project the roughly 2em (24px?) beyond the system
         // (note that we did NOT convert these coordinates yet;
         // they're still in data space, not screen space)
-        let dx = (d.x - this.currentNode.x);
-        let dy = (d.y - this.currentNode.y);
+        let dx = (d.x - this.currentSystem.x);
+        let dy = (d.y - this.currentSystem.y);
         let x = this.scaleFactor * dx + containerBounds.width / 2;
         let y = this.scaleFactor * dy + containerBounds.height / 2;
         let theta = Math.atan2(dy, dx);
@@ -203,17 +203,16 @@ class GraphView extends View {
     d3.select('body').on('keyup', () => {
       let typedLetter = d3.event.key;
       if (keyAssignments[typedLetter]) {
-        let newNode = neighborNodes[keyAssignments[typedLetter]];
-        this.currentNode = newNode;
+        let newSystem = neighborSystems[keyAssignments[typedLetter]];
+        this.currentSystem = newSystem;
         this.render();
       } else if (typedLetter === 'j') {
-        let theta = Math.atan2(this.currentNode.y, this.currentNode.x);
-        let distance = Math.sqrt(this.currentNode.x ** 2 + this.currentNode.y ** 2);
-        let current = distance + ',' + theta;
+        // The distance and angle of the current cell are part of the current system's id
+        let current = this.currentSystem.id.split(':')[0];
         let newDirection = window.prompt('Jump to approximately (distance from center, angle in radians):', current);
         if (newDirection) {
           newDirection = newDirection.split(',').map(d => parseFloat(d));
-          this.currentNode = this.universe.getANode(newDirection[0], newDirection[1]);
+          this.currentSystem = this.universe.getASystem(newDirection[0], newDirection[1]);
           this.render();
         }
       }
