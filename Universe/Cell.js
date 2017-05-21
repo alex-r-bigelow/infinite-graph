@@ -4,18 +4,16 @@ import seedrandom from 'seedrandom';
 import System from '../System/System.js';
 
 class Cell {
-  constructor (coordinates) {
-    this.coordinates = coordinates;
-
+  constructor (x, y) {
     // Prevent degenerate cases of -0 coordinates
-    if (this.coordinates.x === -0) this.coordinates.x = 0;
-    if (this.coordinates.y === -0) this.coordinates.y = 0;
+    this.x = x === -0 ? 0 : x;
+    this.y = y === -0 ? 0 : y;
 
-    this.id = this.coordinates.x + ',' + this.coordinates.y;
+    this.id = this.x + ',' + this.y;
 
-    let distanceSquared = (this.coordinates.x ** 2 + this.coordinates.y ** 2);
+    let distanceSquared = (this.x ** 2 + this.y ** 2);
     this.distance = Math.sqrt(distanceSquared);
-    this.theta = Math.atan2(this.coordinates.y, this.coordinates.x);
+    this.theta = Math.atan2(this.y, this.x);
 
     let numberGenerator = seedrandom(this.id);
 
@@ -31,8 +29,8 @@ class Cell {
       let newSystem = new System(
         this.id + ':' + i,
         // Ensure some basic separation of the systems
-        this.coordinates.x + Math.round(10 * numberGenerator()) / 10,
-        this.coordinates.y + Math.round(10 * numberGenerator()) / 10
+        this.x + Math.round(10 * numberGenerator()) / 10,
+        this.y + Math.round(10 * numberGenerator()) / 10
       );
       let key = newSystem.x + '_' + newSystem.y;
       if (!locations[key]) {
@@ -76,8 +74,8 @@ class Cell {
     this._rightLinks = Cell.VORONOI(allSystems).links()
       .filter(d => {
         // Only consider links that cross between cells
-        if ((d.source.x < this.coordinates.x + 1 && d.target.x >= this.coordinates.x + 1) ||
-            (d.target.x < this.coordinates.x + 1 && d.source.x >= this.coordinates.x + 1)) {
+        if ((d.source.x < this.x + 1 && d.target.x >= this.x + 1) ||
+            (d.target.x < this.x + 1 && d.source.x >= this.x + 1)) {
           return this.discourageLongLinks(d, numberGenerator);
         } else {
           return false;
@@ -95,8 +93,8 @@ class Cell {
     this._bottomLinks = Cell.VORONOI(allSystems).links()
       .filter(d => {
         // Only consider links that cross between cells
-        if ((d.source.y < this.coordinates.y + 1 && d.target.y >= this.coordinates.y + 1) ||
-            (d.target.y < this.coordinates.y + 1 && d.source.y >= this.coordinates.y + 1)) {
+        if ((d.source.y < this.y + 1 && d.target.y >= this.y + 1) ||
+            (d.target.y < this.y + 1 && d.source.y >= this.y + 1)) {
           return this.discourageLongLinks(d, numberGenerator);
         } else {
           return false;
@@ -108,7 +106,7 @@ class Cell {
 
 // For all systems, we want precision to two decimal places past zero; Javascript can
 // support about 13 digits with that precision
-Cell.COORDINATE_LIMIT = 9999999999999;
+Cell.COORDINATE_LIMIT = 99; // 99999999999;
 Cell.VORONOI = d3.voronoi().x(d => d.x).y(d => d.y);
 Cell.PERCENTAGE_OF_LINKS_TO_KEEP = 0.25;
 Cell.MIN_NODES = 5;

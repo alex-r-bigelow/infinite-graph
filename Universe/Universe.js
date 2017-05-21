@@ -31,11 +31,7 @@ class Universe extends Model {
 
     for (let x = cellViewport.left; x <= cellViewport.right; x += 1) {
       for (let y = cellViewport.top; y <= cellViewport.bottom; y += 1) {
-        let id = x + ',' + y;
-        if (!this.activeCells[id]) {
-          this.activeCells[id] = new Cell({x, y});
-        }
-        let cell = this.activeCells[id];
+        let cell = this.getCell(x, y);
         graph.systems = graph.systems.concat(cell.systems);
         graph.links = graph.links.concat(cell.internalLinks());
         if (x > cellViewport.left) {
@@ -54,45 +50,57 @@ class Universe extends Model {
     return graph;
   }
 
+  getSystemNeighbors (systemId) {
+    let system = this.getSystem(systemId);
+
+  }
+
+  parseSystemId (systemId) {
+    let temp = systemId.split(':');
+    let coords = temp[0].split(',');
+    return {
+      x: parseInt(coords[0]),
+      y: parseInt(coords[1]),
+      system: parseInt(temp[1])
+    };
+  }
+
+  getCell (x, y) {
+    let id = x + ',' + y;
+    if (!this.activeCells[id]) {
+      this.activeCells[id] = new Cell(x, y);
+    }
+    return this.activeCells[id];
+  }
+
   getSystem (systemId) {
-    let parameters = systemId.split(':');
-    if (!this.activeCells[parameters[0]]) {
-      let coordinates = parameters[0].split(',').map(d => parseInt(d));
-      if (parameters.length !== 2 || isNaN(coordinates[0]) || isNaN(coordinates[1])) {
-        throw new Error('Bad System Id');
-      }
-      this.activeCells[parameters[0]] = new Cell({
-        x: coordinates[0],
-        y: coordinates[1]
-      });
+    let parsedId = this.parseSystemId(systemId);
+    if (isNaN(parsedId.x) || isNaN(parsedId.y) || isNaN(parsedId.system)) {
+      throw new Error('Bad Cell Id');
     }
-    let systemIndex = parseInt(parameters[1]);
-    if (isNaN(systemIndex) || this.activeCells[parameters[0]].systems.length >= systemIndex) {
-      throw new Error('Bad System Id');
+    let cell = this.getCell(parsedId.x, parsedId.y);
+    if (parsedId.system >= cell.systems.length) {
+      throw new Error('Bad System Number');
     }
-    return this.activeCells[parameters[0]].systems[systemIndex];
+    return cell.systems[parsedId.system];
   }
 
   getASystem (roughDistance, roughAngle) {
     roughDistance = roughDistance || 0;
-    roughAngle = roughAngle || Math.random() * 2 * Math.PI;
+    if (roughAngle !== 0) {
+      roughAngle = roughAngle || Math.random() * 2 * Math.PI;
+    }
     // get the first system in the cell that closest fits these parameters
 
     let cell, system;
     while (!system) {
-      let coordinates = {
-        x: Math.round(roughDistance * Math.cos(roughAngle)),
-        y: Math.round(roughDistance * Math.sin(roughAngle))
-      };
-      let id = coordinates.x + ',' + coordinates.y;
-      if (!this.activeCells[id]) {
-        this.activeCells[id] = new Cell(coordinates);
-      }
-      cell = this.activeCells[id];
+      let x = Math.round(roughDistance * Math.cos(roughAngle));
+      let y = Math.round(roughDistance * Math.sin(roughAngle));
+      cell = this.getCell(x, y);
       if (cell.systems.length > 0) {
         system = cell.systems[0];
       } else {
-        console.log('Cell ' + coordinates.id + 'is empty; reducing distance of ' +
+        console.log('Cell ' + cell.id + ' is empty; reducing distance of ' +
                     roughDistance + ' by a factor of 0.9...');
         roughDistance *= 0.9;
       }

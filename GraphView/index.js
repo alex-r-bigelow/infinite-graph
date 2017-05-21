@@ -63,7 +63,6 @@ class GraphView extends View {
     };
 
     let graph = this.universe.getGraph(cellViewport);
-    console.log(cellViewport, graph);
 
     // Data cleaning: collect the immediate neighbors, and assign keys
     // based on their rough direction
@@ -213,6 +212,17 @@ class GraphView extends View {
         let newSystem = window.prompt('Jump to cellX,cellY:systemNo', current);
         if (newSystem) {
           this.currentSystem = this.universe.getSystem(newSystem);
+          this.render();
+        }
+      } else if (typedLetter === 'a') {
+        // The distance and angle of the current cell are part of the current system's id
+        let distance = Math.sqrt(this.currentSystem.x ** 2 + this.currentSystem.y ** 2);
+        let angle = Math.atan2(this.currentSystem.y, this.currentSystem.x);
+        let radialCoords = window.prompt('Jump to a system at roughly distance,angle from origin',
+          distance + ',' + angle);
+        if (radialCoords) {
+          radialCoords = radialCoords.split(',').map(d => parseFloat(d));
+          this.currentSystem = this.universe.getASystem(radialCoords[0], radialCoords[1]);
           this.render();
         }
       }
