@@ -4,7 +4,7 @@ import View from '../lib/View';
 import template from './template.svg';
 import './style.scss';
 
-import Universe from '../Universe';
+import Universe from '../Universe/Universe.js';
 
 class GraphView extends View {
   setup (d3el) {
@@ -63,6 +63,7 @@ class GraphView extends View {
     };
 
     let graph = this.universe.getGraph(cellViewport);
+    console.log(cellViewport, graph);
 
     // Data cleaning: collect the immediate neighbors, and assign keys
     // based on their rough direction
@@ -208,11 +209,10 @@ class GraphView extends View {
         this.render();
       } else if (typedLetter === 'j') {
         // The distance and angle of the current cell are part of the current system's id
-        let current = this.currentSystem.id.split(':')[0];
-        let newDirection = window.prompt('Jump to approximately (distance from center, angle in radians):', current);
-        if (newDirection) {
-          newDirection = newDirection.split(',').map(d => parseFloat(d));
-          this.currentSystem = this.universe.getASystem(newDirection[0], newDirection[1]);
+        let current = this.currentSystem.id;
+        let newSystem = window.prompt('Jump to cellX,cellY:systemNo', current);
+        if (newSystem) {
+          this.currentSystem = this.universe.getSystem(newSystem);
           this.render();
         }
       }

@@ -1,30 +1,26 @@
 import * as d3 from 'd3';
 import seedrandom from 'seedrandom';
 
-import System from '../System';
+import System from '../System/System.js';
 
 class Cell {
   constructor (coordinates) {
     this.coordinates = coordinates;
 
-    // Prevent degenerate cases of Math.atan2... (the exact result string forms
-    // part of an ID... we can't have negative signs / swap in PI)
-    if (this.coordinates.x === 0) {
-      this.coordinates.x = +0;
-    }
-    if (this.coordinates.y === 0) {
-      this.coordinates.y = +0;
-    }
+    // Prevent degenerate cases of -0 coordinates
+    if (this.coordinates.x === -0) this.coordinates.x = 0;
+    if (this.coordinates.y === -0) this.coordinates.y = 0;
+
+    this.id = this.coordinates.x + ',' + this.coordinates.y;
 
     let distanceSquared = (this.coordinates.x ** 2 + this.coordinates.y ** 2);
-    let theta = Math.atan2(this.coordinates.y, this.coordinates.x);
-    this.cellId = Math.sqrt(distanceSquared) + ',' + theta;
+    this.distance = Math.sqrt(distanceSquared);
+    this.theta = Math.atan2(this.coordinates.y, this.coordinates.x);
 
-    let starDensity = 1 - distanceSquared / Cell.COORDINATE_LIMIT ** 2;
-
-    let numberGenerator = seedrandom(this.coordinates);
+    let numberGenerator = seedrandom(this.id);
 
     // 1. How many systems in this cell?
+    let starDensity = 1 - distanceSquared / Cell.COORDINATE_LIMIT ** 2;
     let numSystems = Math.floor(starDensity * (Cell.MIN_NODES +
       numberGenerator() * (Cell.MAX_NODES - Cell.MIN_NODES)));
 
@@ -32,32 +28,36 @@ class Cell {
     this.systems = [];
     let locations = {};
     for (let i = 0; i < numSystems; i += 1) {
-      // Ensure some basic separation of the systems
       let newSystem = new System(
-        numberGenerator.int32(),
-        this.cellId + ':' + i,
+        this.id + ':' + i,
+        // Ensure some basic separation of the systems
         this.coordinates.x + Math.round(10 * numberGenerator()) / 10,
         this.coordinates.y + Math.round(10 * numberGenerator()) / 10
       );
       let key = newSystem.x + '_' + newSystem.y;
       if (!locations[key]) {
-        // Prevent systems from being in the same place... even though the odds are small,
-        // the galaxy is huge... so it's going to happen at some point, by definition
+        // Prevent duplicate systems
+        locations[key] = newSystem;
         this.systems.push(newSystem);
       }
     }
 
-    // We need to generate three additional seeds that can be (reproducably) used
-    // later to generate internal links, links to the right, and links to the bottom
+    // 3. We need to generate three additional seeds that can be (reproducably)
+    // used later to generate internal links, links to the right, and links to
+    // the bottom in an order-independent way
     this.internalLinkSeed = numberGenerator.int32();
     this.rightLinkSeed = numberGenerator.int32();
     this.bottomLinkSeed = numberGenerator.int32();
+
+    // Store the last time this cell was used
+    this.lastTouched = Date.now();
   }
   discourageLongLinks (link, numberGenerator) {
     return numberGenerator() <= 1 - Math.sqrt((link.target.x - link.source.x) ** 2 +
                                               (link.target.y - link.source.y) ** 2);
   }
-  generateInternalLinks () {
+  internalLinks () {
+    this.lastTouched = Date.now();
     if (this.links) {
       return this.links;
     }
@@ -66,15 +66,16 @@ class Cell {
       .filter(d => this.discourageLongLinks(d, numberGenerator));
     return this.links;
   }
-  generateRightLinks (rightCell) {
-    if (this.rightLinks) {
-      return this.rightLinks;
+  rightLinks (rightCell) {
+    this.lastTouched = Date.now();
+    if (this._rightLinks) {
+      return this._rightLinks;
     }
     let numberGenerator = seedrandom(this.rightLinkSeed);
     let allSystems = this.systems.concat(rightCell.systems);
-    this.rightLinks = Cell.VORONOI(allSystems).links()
+    this._rightLinks = Cell.VORONOI(allSystems).links()
       .filter(d => {
-        // Only consider edges that cross between cells
+        // Only consider links that cross between cells
         if ((d.source.x < this.coordinates.x + 1 && d.target.x >= this.coordinates.x + 1) ||
             (d.target.x < this.coordinates.x + 1 && d.source.x >= this.coordinates.x + 1)) {
           return this.discourageLongLinks(d, numberGenerator);
@@ -82,17 +83,18 @@ class Cell {
           return false;
         }
       });
-    return this.rightLinks;
+    return this._rightLinks;
   }
-  generateBottomLinks (bottomCell) {
-    if (this.bottomLinks) {
-      return this.bottomLinks;
+  bottomLinks (bottomCell) {
+    this.lastTouched = Date.now();
+    if (this._bottomLinks) {
+      return this._bottomLinks;
     }
     let numberGenerator = seedrandom(this.bottomLinkSeed);
     let allSystems = this.systems.concat(bottomCell.systems);
-    this.bottomLinks = Cell.VORONOI(allSystems).links()
+    this._bottomLinks = Cell.VORONOI(allSystems).links()
       .filter(d => {
-        // Only consider edges that cross between cells
+        // Only consider links that cross between cells
         if ((d.source.y < this.coordinates.y + 1 && d.target.y >= this.coordinates.y + 1) ||
             (d.target.y < this.coordinates.y + 1 && d.source.y >= this.coordinates.y + 1)) {
           return this.discourageLongLinks(d, numberGenerator);
@@ -100,7 +102,7 @@ class Cell {
           return false;
         }
       });
-    return this.bottomLinks;
+    return this._bottomLinks;
   }
 }
 

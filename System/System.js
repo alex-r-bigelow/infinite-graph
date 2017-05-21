@@ -1,6 +1,5 @@
 class System {
-  constructor (seed, id, x, y) {
-    this.seed = seed;
+  constructor (id, x, y) {
     this.id = id;
     this.x = x;
     this.y = y;
