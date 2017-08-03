@@ -2712,8 +2712,8 @@ var Cell = function () {
       return numberGenerator() <= 1 - Math.sqrt((link.target.x - link.source.x) ** 2 + (link.target.y - link.source.y) ** 2);
     }
   }, {
-    key: 'generateInternalLinks',
-    value: function generateInternalLinks() {
+    key: 'internalLinks',
+    value: function internalLinks() {
       var _this = this;
 
       if (this.links) {
@@ -2726,8 +2726,8 @@ var Cell = function () {
       return this.links;
     }
   }, {
-    key: 'generateRightLinks',
-    value: function generateRightLinks(rightCell) {
+    key: 'rightLinks',
+    value: function rightLinks(rightCell) {
       var _this2 = this;
 
       if (this.rightLinks) {
@@ -2746,8 +2746,8 @@ var Cell = function () {
       return this.rightLinks;
     }
   }, {
-    key: 'generateBottomLinks',
-    value: function generateBottomLinks(bottomCell) {
+    key: 'bottomLinks',
+    value: function bottomLinks(bottomCell) {
       var _this3 = this;
 
       if (this.bottomLinks) {
@@ -2855,13 +2855,13 @@ var Universe = function (_Model) {
           }
           var cell = this.currentCells[key];
           graph.nodes = graph.nodes.concat(cell.nodes);
-          graph.links = graph.links.concat(cell.generateInternalLinks());
+          graph.links = graph.links.concat(cell.internalLinks());
           if (x > cellViewport.left) {
-            var leftLinks = this.currentCells[x - 1 + '_' + y].generateRightLinks(cell);
+            var leftLinks = this.currentCells[x - 1 + '_' + y].rightLinks(cell);
             graph.links = graph.links.concat(leftLinks);
           }
           if (y > cellViewport.top) {
-            var topLinks = this.currentCells[x + '_' + (y - 1)].generateBottomLinks(cell);
+            var topLinks = this.currentCells[x + '_' + (y - 1)].bottomLinks(cell);
             graph.links = graph.links.concat(topLinks);
           }
         }

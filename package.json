@@ -25,6 +25,7 @@
     "html-webpack-plugin": "^2.10.0",
     "json-loader": "^0.5.4",
     "node-sass": "^4.5.1",
+    "pouchdb": "^6.2.0",
     "rollup": "^0.41.4",
     "rollup-plugin-node-resolve": "^2.0.0",
     "sass-loader": "^6.0.3",
